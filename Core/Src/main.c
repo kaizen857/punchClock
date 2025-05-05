@@ -19,12 +19,16 @@
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
 #include "adc.h"
+#include "at24cxx.h"
+#include "dataStruct.h"
 #include "dma.h"
 
 #include "fatfs.h"
 #include "i2c.h"
 #include "sdio.h"
 #include "spi.h"
+#include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_uart.h"
 #include "usart.h"
 #include "gpio.h"
 
@@ -40,11 +44,11 @@
 #include "gui_guider.h"
 #include "events_init.h"
 #include "eventHandler.h"
+#include <stdint.h>
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN PTD */
-EventQueue eventQueue = {0};
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
@@ -64,7 +68,8 @@ PUTCHAR_PROTOTYPE
 
 /* Private macro -------------------------------------------------------------*/
 /* USER CODE BEGIN PM */
-
+// #define WRITEMODE
+// #define READMODE
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
@@ -128,8 +133,68 @@ int main(void)
     // HAL_ADC_Start(&hadc1);
     // HAL_ADC_PollForConversion(&hadc1, HAL_MAX_DELAY);
     // totalInit();
+#ifdef WRITEMODE
+    if (at24_isConnected())
+    {
+        uint16_t tmp = 5;
+        UserInfo users[] = {{23125011044, "张三"},
+                            {23125011045, "李四"},
+                            {23125011046, "王五"},
+                            {23125011047, "赵六"},
+                            {23125011048, "钱七"}};
+        CheckInfo checks[] = {{23125011044, 202505050443, 202505050543},
+                              {23125011045, 202505050444, 202505050544},
+                              {23125011046, 202505050445, 202505050545},
+                              {23125011047, 202505050446, 202505050546},
+                              {23125011048, 202505050447, 202505050547}};
+        at24_write(USER_INFO_LEN_ADDR, (uint8_t *)&tmp, 2, 1000);
+        at24_write(CHECK_INFO_LEN_ADDR, (uint8_t *)&tmp, 2, 1000);
+        at24_write(USER_INFO_ADDR, (uint8_t *)users, sizeof(users), 1000);
+        at24_write(CHECK_INFO_ADDR, (uint8_t *)checks, sizeof(checks), 1000);
+        HAL_UART_Transmit(&huart1, (uint8_t *)"Write OK\n", 10, 1000);
+        HAL_Delay(HAL_MAX_DELAY);
+    }
+#endif
+#ifdef READMODE
+    if (at24_isConnected())
+    {
+        uint8_t message[64];
+        uint16_t userNumber = 0, checkNumber = 0;
+        at24_read(USER_INFO_LEN_ADDR, (uint8_t *)&userNumber, 2, 1000);
+        at24_read(CHECK_INFO_LEN_ADDR, (uint8_t *)&checkNumber, 2, 1000);
+        UserInfo *users = (UserInfo *)malloc(sizeof(UserInfo) * userNumber);
+        CheckInfo *checks = (CheckInfo *)malloc(sizeof(CheckInfo) * checkNumber);
+        at24_read(USER_INFO_ADDR, (uint8_t *)users, sizeof(UserInfo) * userNumber, 1000);
+        at24_read(CHECK_INFO_ADDR, (uint8_t *)checks, sizeof(CheckInfo) * checkNumber, 1000);
+        snprintf((char *)message, sizeof(message), "User Number: %d\n", userNumber);
+        HAL_UART_Transmit(&huart1, message, strlen((char *)message), 1000);
+        HAL_Delay(500);
+        snprintf((char *)message, sizeof(message), "Check Number: %d\n", checkNumber);
+        HAL_UART_Transmit(&huart1, message, strlen((char *)message), 1000);
+        HAL_Delay(500);
+        for (int i = 0; i < userNumber; i++)
+        {
+            // printf("User %d: %d %s\n", i, users[i].id, users[i].name);
+            snprintf((char *)message, sizeof(message), "User %d: %llu %s\n", i, users[i].ID, users[i].Name);
+            HAL_UART_Transmit(&huart1, message, strlen((char *)message), 1000);
+            HAL_Delay(500);
+        }
+        for (int i = 0; i < checkNumber; i++)
+        {
+            // printf("Check %d: %d %d %d\n", i, checks[i].id, checks[i].checkIn, checks[i].checkOut);
+            snprintf((char *)message, sizeof(message), "Check %d: %llu %llu %llu\n", i, checks[i].ID, checks[i].startTime, checks[i].endTime);
+            HAL_UART_Transmit(&huart1, message, strlen((char *)message), 1000);
+            HAL_Delay(500);
+        }
+        HAL_Delay(HAL_MAX_DELAY);
+    }
+#endif
+
+#ifndef WRITEMODE
+#ifndef READMODE
     ds3231Init();
     delay_init(100);
+    at24Init();
     LCD_Init();
     LCD_direction(3);
     TP_Init();
@@ -154,6 +219,8 @@ int main(void)
 
         /* USER CODE BEGIN 3 */
     }
+#endif
+#endif
     /* USER CODE END 3 */
 }
 

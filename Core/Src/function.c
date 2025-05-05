@@ -1,45 +1,26 @@
 #include "function.h"
+#include "at24cxx.h"
+#include "dataStruct.h"
+#include "gui_guider.h"
 #include "lcd.h"
 #include "RC522/RC522.h"
 #include "Status.h"
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_uart.h"
+#include "stm32f4xx_it.h"
+#include "usart.h"
+#include "lvgl.h"
+#include "main.h"
+#include <stdint.h>
+
+uint16_t totalUserNum = 0;
+uint16_t totalCheckNum = 0;
+UserInfo *userList = NULL;
+CheckInfo *checkList = NULL;
 
 Status status = {0};
 Time nowTime = {0};
 uint8_t photostatus = 0;
-
-void pushEvent(TotalEvent event)
-{
-    if (eventQueue.size >= 10)
-    {
-        popEvent(NULL); // 队列满，弹出最早的事件
-    }
-    eventQueue.event[eventQueue.tail] = event;
-    eventQueue.tail = (eventQueue.tail + 1) % 10;
-    eventQueue.size++;
-}
-
-bool popEvent(TotalEvent *event)
-{
-    if (eventQueue.size > 0)
-    {
-        if (event != NULL)
-        {
-            *event = eventQueue.event[eventQueue.head];
-            eventQueue.head = (eventQueue.head + 1) % 10;
-        }
-        else
-        {
-            eventQueue.head = (eventQueue.head + 1) % 10;
-        }
-        eventQueue.size--;
-        return true;
-    }
-    else
-    {
-        return false; // 队列为空
-    }
-}
 
 // 计算星期
 int16_t calculate_weekday(int16_t year, int16_t month, int16_t day)
@@ -231,7 +212,34 @@ void at24Init(void)
 {
     if (at24_isConnected())
     {
-        // TODO:读取人员信息以及打卡信息
+        // 人员信息
+        at24_read(USER_INFO_LEN_ADDR, (uint8_t *)&totalUserNum, 2, 1000);
+        if (totalUserNum > 600) // 设计上到不了600，故这边可以用来判断数值是否有效
+        {
+            totalUserNum = 0;
+            userList = (UserInfo *)malloc(sizeof(UserInfo) * totalUserNum + 1);
+        }
+        else
+        {
+            userList = (UserInfo *)malloc(sizeof(UserInfo) * totalUserNum);
+            if (userList != NULL)
+            {
+                at24_read(USER_INFO_ADDR, (uint8_t *)userList, sizeof(UserInfo) * totalUserNum, HAL_MAX_DELAY);
+            }
+            else
+            {
+                // TODO:处理malloc失败
+                HardFault_Handler();
+            }
+        }
+
+        // 打卡记录条数
+        at24_read(CHECK_INFO_LEN_ADDR, (uint8_t *)&totalCheckNum, 2, HAL_MAX_DELAY);
+        if (totalCheckNum > 3000)
+        {
+            totalCheckNum = 0;
+        }
+        status.mode = OK;
     }
     else
     {
@@ -263,53 +271,6 @@ void setTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t mi
     DS3231_SetFullDate(day, month, weekday, year);
 
     DS3231_SetFullTime(hour, minute, 0);
-}
-
-void Float2Str(char *str, float value)
-{
-    int Head = (int)value;
-    int Point = (int)((value - Head) * 10.0);
-    sprintf(str, "voltage:%d.%dv", Head, Point);
-}
-
-void handleEvent(void)
-{
-    TotalEvent event;
-    if (popEvent(&event))
-    {
-        if (event.type == TOUCHEVENT) // 触摸事件
-        {
-            if (status.mode == NORMALMOD) // 主界面
-            {
-                if (event.touchEvent.x >= 330 && event.touchEvent.y >= 20 && event.touchEvent.x <= 387 && event.touchEvent.y <= 60)
-                {
-                    status.mode = EXPORTMODE; // 进入导出界面
-                    // exportData();
-                }
-                else if (event.touchEvent.x >= 0 && event.touchEvent.y >= 0 && event.touchEvent.x <= 50 && event.touchEvent.y <= 60)
-                {
-                    status.mode = TIMECHANGEMODE; // 进入修改时间界面
-                    // 按下时间部分进入到修改时间的界面
-                    ChangeTime();
-                }
-            }
-            else if (status.mode == TIMECHANGEMODE) // 修改时间界面
-            {
-                // TODO:处理修改时间事件
-            }
-            else if (status.mode == EXPORTMODE) // 导出界面
-            {
-                // TODO:处理导出事件
-            }
-#ifdef DEBUG
-            printf("touch: %d %d\r\n", event.touchEvent.x, event.touchEvent.y);
-#endif
-        }
-        else
-        {
-            // TODO:处理刷卡事件
-        }
-    }
 }
 
 // RC522测试函数
@@ -443,6 +404,71 @@ void totalInit(void)
 
 bool writeUserInfo(UserInfo *userInfo)
 {
-    // TODO:向EEPROM中写入用户信息
-    return false;
+    // 向EEPROM中写入用户信息
+
+    // 计算写入地址
+    uint32_t addr = USER_INFO_ADDR + (uint32_t)totalUserNum * sizeof(UserInfo);
+    if (addr + sizeof(UserInfo) > EEPROM_MAX_ADDRESS)
+    {
+        return false;
+    }
+    // 入用户数据
+    if (!at24_write(addr, (uint8_t *)userInfo, sizeof(UserInfo), 1000))
+    {
+        return false;
+    }
+
+    // 更新用户计数
+    uint16_t newTotal = totalUserNum + 1;
+    if (!at24_write(USER_INFO_LEN_ADDR, (uint8_t *)&newTotal, sizeof(newTotal), 1000))
+    {
+        // 写入失败，尝试回滚用户数据
+        UserInfo empty = {0};
+        at24_write(addr, (uint8_t *)&empty, sizeof(UserInfo), 1000);
+        return false;
+    }
+    // 更新内存中的计数
+    totalUserNum = newTotal;
+    return true;
+}
+
+void updateUserInfoTable(lv_ui *ui)
+{
+    lv_table_set_column_count(ui->MainMenuScreen_UserInfoTable, 2);
+    lv_table_set_row_count(ui->MainMenuScreen_UserInfoTable, totalUserNum + 1);
+    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable, 0, 0, "姓名");
+
+    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable, 0, 1, "学号");
+    char buffer[21];
+    for (int i = 0; i < totalUserNum; i++)
+    {
+        snprintf(buffer, sizeof(buffer), "%" PRIu64, userList[i].ID);
+        lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable, i + 1, 0, userList[i].Name);
+        lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable, i + 1, 1, buffer);
+    }
+}
+
+bool updateUserInfoList(UserInfo *user)
+{
+    if (user == NULL)
+    {
+        return false;
+    }
+    UserInfo *newUserList = (UserInfo *)malloc(sizeof(UserInfo) * (totalUserNum));
+    if (newUserList == NULL)
+    {
+        return false;
+    }
+    if (userList != NULL && (totalUserNum - 1) > 0)
+    {
+        memcpy(newUserList, userList, sizeof(UserInfo) * (totalUserNum - 1));
+    }
+    memcpy(&newUserList[totalUserNum - 1], user, sizeof(UserInfo));
+    if (userList != NULL)
+    {
+        free(userList);
+    }
+    userList = newUserList;
+    return true;
+    // memcpy(newUserList, userList, sizeof(UserInfo) * (totalUserNum - 1));
 }

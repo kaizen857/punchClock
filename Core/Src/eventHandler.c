@@ -25,33 +25,100 @@ void userInfoPanel_ImportFromSDcard_event_handler(lv_event_t *e) // 从SD卡导�
 
 void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
 {
-    // TODO:确认添加新用户
     lv_event_code_t code = lv_event_get_code(e);
-    switch (code)
+    if (code != LV_EVENT_CLICKED)
+        return;
+
+    // 获取输入内容
+    const char *name = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_1);
+    const char *id_str = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_2);
+
+    // 验证输入不为空
+    if (name == NULL || id_str == NULL || name[0] == '\0' || id_str[0] == '\0')
     {
-    case LV_EVENT_CLICKED:
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "输入为空!请重试");
+        lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+        return;
+    }
+
+    // 验证ID是否为有效数字
+    char *endptr;
+    uint64_t id_num = strtoull(id_str, &endptr, 10);
+
+    // 检查转换是否完全成功
+    if (*endptr != '\0' || id_str == endptr)
     {
-        const char *name = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_1);
-        const char *id = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_2);
-        uint64_t id_num = strtoull(id, NULL, 10);
-        UserInfo info = {id_num};
-        strncpy(info.Name, name, sizeof(info.Name) - 1);
-        if (writeUserInfo(&info) == 0)
-        {
-            // 添加成功
-            lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
-            break;
-        }
-        else
-        {
-            // TODO:添加失败
-            lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加失败!请重试");
-            lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
-        }
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "ID必须为数字!");
+        lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+        return;
     }
-    default:
-        break;
+
+    // 准备用户信息
+    UserInfo info = {id_num};
+
+    // 安全复制名称
+    size_t name_len = strlen(name);
+    if (name_len >= sizeof(info.Name))
+    {
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "姓名过长!");
+        lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+        return;
     }
+    strncpy(info.Name, name, sizeof(info.Name) - 1);
+    info.Name[sizeof(info.Name) - 1] = '\0'; // 确保终止
+
+    // 写入用户信息
+    if (writeUserInfo(&info) && updateUserInfoList(&info))
+    {
+        lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！");
+        lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+
+        // 清空输入框
+        lv_textarea_set_text(guider_ui.MainMenuScreen_ta_1, "");
+        lv_textarea_set_text(guider_ui.MainMenuScreen_ta_2, "");
+    }
+    else
+    {
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加失败!请重试");
+        lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+    }
+    // // TODO:确认添加新用户
+    // lv_event_code_t code = lv_event_get_code(e);
+    // switch (code)
+    // {
+    // case LV_EVENT_CLICKED:
+    // {
+    //     const char *name = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_1);
+    //     const char *id = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_2);
+    //     if (name == NULL || id == NULL)
+    //     {
+    //         // TODO:输入为空
+    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "输入为空!请重试");
+    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+    //         break;
+    //     }
+    //     uint64_t id_num = strtoull(id, NULL, 10);
+    //     UserInfo info = {id_num};
+    //     strncpy(info.Name, name, sizeof(info.Name) - 1);
+    //     if (writeUserInfo(&info) == true)
+    //     {
+    //         // 添加成功
+    //         lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
+    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！");
+    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+    //         break;
+    //     }
+    //     else
+    //     {
+    //         // TODO:添加失败
+    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加失败!请重试");
+    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+    //     }
+    // }
+    // default:
+    //     break;
+    // }
 }
 
 void changeTimePanel_ConfirmButton_event_handler(lv_event_t *e)
@@ -70,7 +137,6 @@ void changeTimePanel_ConfirmButton_event_handler(lv_event_t *e)
             minute = atoi(lv_label_get_text(guider_ui.MainMenuScreen_minuteChangeLabel));
         }
 
-        // TODO:确认修改时间
         DS3231_SetMinute(minute);
         DS3231_SetHour(hour);
         DS3231_SetSecond(0); // 设置秒为0
@@ -215,7 +281,7 @@ void MainMenuScreen_digital_clock_1_timer(lv_timer_t *timer)
 
 void myEventInit(lv_ui *ui)
 {
-    // lv_obj_add_event_cb(ui->MainMenuScreen_ConfirmButton, newUserInfoPanel_ConfirmButton_event_handler, LV_EVENT_ALL, ui);
+    lv_obj_add_event_cb(ui->MainMenuScreen_btn_12, newUserInfoPanel_ConfirmButton_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->MainMenuScreen_hourUpButton, changeTimePanel_HourUpButton_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->MainMenuScreen_hourDownButton, changeTimePanel_HourDownButton_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->MainMenuScreen_minuteUpButton, changeTimePanel_MinUpButton_event_handler, LV_EVENT_ALL, ui);

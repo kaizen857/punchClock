@@ -213,31 +213,9 @@ void setup_scr_MainMenuScreen(lv_ui *ui)
     lv_table_set_column_count(ui->MainMenuScreen_UserInfoTable,2);
     lv_table_set_row_count(ui->MainMenuScreen_UserInfoTable,13);
     lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,0,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,1,0,"张三");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,2,0,"李四");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,3,0,"Citron");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,4,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,5,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,6,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,7,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,8,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,9,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,10,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,11,0,"Name");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,12,0,"Name");
+    
     lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,0,1,"学号");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,1,1,"$1");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,2,1,"$2");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,3,1,"$3");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,4,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,5,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,6,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,7,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,8,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,9,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,10,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,11,1,"Price");
-    lv_table_set_cell_value(ui->MainMenuScreen_UserInfoTable,12,1,"Price");
+    
 
     //Write style for MainMenuScreen_UserInfoTable, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_pad_top(ui->MainMenuScreen_UserInfoTable, 0, LV_PART_MAIN|LV_STATE_DEFAULT);
@@ -387,49 +365,11 @@ void setup_scr_MainMenuScreen(lv_ui *ui)
     lv_obj_set_pos(ui->MainMenuScreen_table_2, 34, 22);
     lv_obj_set_scrollbar_mode(ui->MainMenuScreen_table_2, LV_SCROLLBAR_MODE_OFF);
     lv_table_set_column_count(ui->MainMenuScreen_table_2,3);
-    lv_table_set_row_count(ui->MainMenuScreen_table_2,14);
+    lv_table_set_row_count(ui->MainMenuScreen_table_2,1);
     lv_table_set_cell_value(ui->MainMenuScreen_table_2,0,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,1,0,"Apple");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,2,0,"Banana");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,3,0,"Citron");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,4,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,5,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,6,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,7,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,8,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,9,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,10,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,11,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,12,0,"姓名");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,13,0,"姓名");
     lv_table_set_cell_value(ui->MainMenuScreen_table_2,0,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,1,1,"$1");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,2,1,"$2");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,3,1,"$3");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,4,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,5,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,6,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,7,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,8,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,9,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,10,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,11,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,12,1,"开始时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,13,1,"开始时间");
     lv_table_set_cell_value(ui->MainMenuScreen_table_2,0,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,1,2,"0");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,2,2,"0");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,3,2,"0");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,4,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,5,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,6,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,7,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,8,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,9,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,10,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,11,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,12,2,"结束时间");
-    lv_table_set_cell_value(ui->MainMenuScreen_table_2,13,2,"结束时间");
+    
 
     //Write style for MainMenuScreen_table_2, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
     lv_obj_set_style_pad_top(ui->MainMenuScreen_table_2, 0, LV_PART_MAIN|LV_STATE_DEFAULT);

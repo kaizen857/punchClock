@@ -25,7 +25,8 @@
             "editor.tabSize": 4,
             "editor.autoIndent": "advanced"
         },
-        "cortex-debug.variableUseNaturalFormat": true
+        "cortex-debug.variableUseNaturalFormat": true,
+        "Codegeex.RepoIndex": true
     },
     "extensions": {
         "recommendations": [

@@ -25,7 +25,7 @@ static void MainMenuScreen_userInfoButton_event_handler(lv_event_t *e)
     case LV_EVENT_CLICKED:
     {
         lv_obj_remove_flag(guider_ui.MainMenuScreen_userInfoPanel, LV_OBJ_FLAG_HIDDEN);
-        updateUserInfoTable(&guider_ui);
+        
         lv_obj_add_flag(guider_ui.MainMenuScreen_MainMenu, LV_OBJ_FLAG_HIDDEN);
         break;
     }
@@ -41,6 +41,7 @@ static void MainMenuScreen_btn_3_event_handler(lv_event_t *e)
     {
     case LV_EVENT_CLICKED:
     {
+        
         lv_obj_remove_flag(guider_ui.MainMenuScreen_CheckInfoPanel, LV_OBJ_FLAG_HIDDEN);
         lv_obj_add_flag(guider_ui.MainMenuScreen_MainMenu, LV_OBJ_FLAG_HIDDEN);
         break;

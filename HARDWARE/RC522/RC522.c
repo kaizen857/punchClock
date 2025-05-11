@@ -1,580 +1,214 @@
-/*
- * RC522.c
- *
- *  Created on: Mar 23, 2022
- *      Author: LX
- */
-
+#include "stm32f4xx_hal.h"
 #include "RC522.h"
-#include "delay.h"
-#include "spi.h"
 #include "stdio.h"
+#include "usart.h"
+#include <string.h>
 
-#define RC522_RST_HIGH HAL_GPIO_WritePin(RC522_RST_GPIO_Port, RC522_RST_Pin, GPIO_PIN_SET);
-#define RC522_RST_LOW HAL_GPIO_WritePin(RC522_RST_GPIO_Port, RC522_RST_Pin, GPIO_PIN_RESET);
+extern SPI_HandleTypeDef hspi2;
 
-#define RC522_ENABLE HAL_GPIO_WritePin(RC522_CS_GPIO_Port, RC522_CS_Pin, GPIO_PIN_RESET);
-#define RC522_DISABLE HAL_GPIO_WritePin(RC522_CS_GPIO_Port, RC522_CS_Pin, GPIO_PIN_SET);
-
-#define fac_us 100 // 时钟频率，单位MHZ
-
-/*微秒级延时函数*/
-/*void delay_us(uint32_t nus)
+/**************************************************************************************
+ * 函数名称：MFRC_Init
+ * 功能描述：MFRC初始化
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：MFRC的SPI接口速率为0~10Mbps
+ ***************************************************************************************/
+void MFRC_Init(void)
 {
-    uint32_t ticks;
-    uint32_t told, tnow, tcnt = 0;
-    uint32_t reload = SysTick->LOAD; // LOAD的值
-    ticks = nus * fac_us;            // 需要的节拍数
-    told = SysTick->VAL;             // 刚进入时的计数器值
-    while (1)
-    {
-        tnow = SysTick->VAL;
-        if (tnow != told)
-        {
-            if (tnow < told)
-                tcnt += told - tnow; // 这里注意一下SYSTICK是一个递减的计数器就可以了.
-            else
-                tcnt += reload - tnow + told;
-            told = tnow;
-            if (tcnt >= ticks)
-                break; // 时间超过/等于要延迟的时间,则退出.
-        }
-    }
-}*/
-int32_t SPI_WriteNBytes(SPI_HandleTypeDef *SPIx, uint8_t *p_TxData, uint32_t sendDataNum)
-{
-    /*uint8_t retry = 0; // 初始化重试计数器
-    while (sendDataNum--) // 循环发送数据，直到sendDataNum为0
-    {
-        while ((SPIx->SR & SPI_FLAG_TXE) == 0) // 等待发送区空
-        {
-            retry++; // 增加重试计数
-            if (retry > 20000) // 如果重试次数超过20000次，返回错误码-1
-                return -1;
-        }
-        SPIx->DR = *p_TxData++; // 发送一个byte，并将指针移动到下一个byte
-        retry = 0; // 重置重试计数器
-        while ((SPIx->SR & SPI_FLAG_RXNE) == 0) // 等待接收完一个byte
-        {
-            SPIx->SR = SPIx->SR; // 读取SR寄存器以清除可能的错误标志
-            retry++; // 增加重试计数
-            if (retry > 20000) // 如果重试次数超过20000次，返回错误码-1
-                return -1;
-        }
-        SPIx->DR; // 读取DR寄存器以清除接收到的数据
-    }
-    return 0; // 发送成功，返回0*/
-    HAL_StatusTypeDef status;
-
-    // 使用HAL库的SPI_Transmit函数发送数据
-    status = HAL_SPI_Transmit(SPIx, p_TxData, sendDataNum, HAL_MAX_DELAY);
-    if (status != HAL_OK)
-    {
-        // 如果传输失败，返回错误码-1
-        return -1;
-    }
-
-    // 发送成功，返回0
-    return 0;
-}
-int32_t SPI_ReadNBytes(SPI_TypeDef *SPIx, uint8_t *p_RxData, uint32_t readDataNum)
-{
-    uint8_t retry = 0;
-    while (readDataNum--)
-    {
-        SPIx->DR = 0xFF;
-        while (!(SPIx->SR & SPI_FLAG_TXE))
-        {
-            retry++;
-            if (retry > 20000)
-                return -1;
-        }
-        retry = 0;
-        while (!(SPIx->SR & SPI_FLAG_RXNE))
-        {
-            retry++;
-            if (retry > 20000)
-                return -1;
-        }
-        *p_RxData++ = SPIx->DR;
-    }
-    return 0;
-}
-void RC522_Init(void)
-{
-    RC522_ENABLE;
-    HAL_SPI_Transmit(&hspi2, (uint8_t *)0xaa, sizeof((uint8_t *)0xaa), 0xFF); // 启动传输
-    RC522_DISABLE;
-
-    HAL_Delay(50);
-    PcdReset(); // 复位RC522读卡器
-    HAL_Delay(10);
-    PcdReset(); // 复位RC522读卡器
-    HAL_Delay(10);
-    PcdAntennaOff(); // 关闭天线发射
-    HAL_Delay(10);
-    PcdAntennaOn(); // 开启天线发射
-
-    printf("RFID-MFRC522 初始化完成\r\nFindCard Starting ...\r\n"); // 测试引脚初始化完成
+    RS522_NSS(1);
+    RS522_RST(1);
 }
 
-// 功    能：寻卡
-// 参数说明: req_code[IN]:寻卡方式
-//                 0x52 = 寻感应区内所有符合14443A标准的卡
-//                 0x26 = 寻未进入休眠状态的卡
-//           pTagType[OUT]：卡片类型代码
-//                 0x4400 = Mifare_UltraLight
-//                 0x0400 = Mifare_One(S50)
-//                 0x0200 = Mifare_One(S70)
-//                 0x0800 = Mifare_Pro(X)
-//                 0x4403 = Mifare_DESFire
-// 返    回: 成功返回MI_OK
-char PcdRequest(unsigned char req_code, unsigned char *pTagType)
+/**************************************************************************************
+ * 函数名称: SPI_RW_Byte
+ * 功能描述: 模拟SPI读写一个字节
+ * 入口参数: -byte:要发送的数据
+ * 出口参数: -byte:接收到的数据
+ ***************************************************************************************/
+static uint8_t ret; // 这些函数是HAL与标准库不同的地方【读写函数】
+uint8_t SPI2_RW_Byte(uint8_t byte)
 {
-    char status;
-    unsigned int unLen;
-    unsigned char ucComMF522Buf[MAXRLEN];
-
-    ClearBitMask(Status2Reg, 0x08);  // 清RC522寄存位
-    WriteRawRC(BitFramingReg, 0x07); // 写RC623寄存器
-    SetBitMask(TxControlReg, 0x03);  // 置RC522寄存位
-
-    ucComMF522Buf[0] = req_code;
-
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 1, ucComMF522Buf, &unLen);
-    if ((status == MI_OK) && (unLen == 0x10))
-    {
-        *pTagType = ucComMF522Buf[0];
-        *(pTagType + 1) = ucComMF522Buf[1];
-    }
-    else
-    {
-        status = MI_ERR;
-    }
-    return status;
+    HAL_SPI_TransmitReceive(&hspi2, &byte, &ret, 1, 10); // 把byte 写入，并读出一个值，把它存入ret
+    return ret;                                          // 入口是byte 的地址，读取时用的也是ret地址，一次只写入一个值10
 }
-// 功    能：防冲撞
-// 参数说明: pSnr[OUT]:卡片序列号，4字节
-// 返    回: 成功返回MI_OK
-char PcdAnticoll(unsigned char *pSnr)
-{
-    char status;
-    unsigned char i, snr_check = 0;
-    unsigned int unLen;
-    unsigned char ucComMF522Buf[MAXRLEN];
-    ClearBitMask(Status2Reg, 0x08);
-    WriteRawRC(BitFramingReg, 0x00);
-    ClearBitMask(CollReg, 0x80);
-    ucComMF522Buf[0] = PICC_ANTICOLL1;
-    ucComMF522Buf[1] = 0x20;
 
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 2, ucComMF522Buf, &unLen);
-    if (status == MI_OK)
-    {
-        for (i = 0; i < 4; i++)
-        {
-            *(pSnr + i) = ucComMF522Buf[i];
-            snr_check ^= ucComMF522Buf[i];
-        }
-        if (snr_check != ucComMF522Buf[i])
-        {
-            status = MI_ERR;
-        }
-    }
-    SetBitMask(CollReg, 0x80);
-    return status;
+/**************************************************************************************
+ * 函数名称：MFRC_WriteReg
+ * 功能描述：写一个寄存器
+ * 入口参数：-addr:待写的寄存器地址
+ *           -data:待写的寄存器数据
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void MFRC_WriteReg(uint8_t addr, uint8_t data)
+{
+    uint8_t AddrByte;
+    AddrByte = (addr << 1) & 0x7E; // 求出地址字节
+    RS522_NSS(0);                  // NSS拉低
+    SPI2_RW_Byte(AddrByte);        // 写地址字节
+    SPI2_RW_Byte(data);            // 写数据
+    RS522_NSS(1);                  // NSS拉高
 }
-// 功    能：选定卡片
-// 参数说明: pSnr[IN]:卡片序列号，4字节
-// 返    回: 成功返回MI_OK
-char PcdSelect(unsigned char *pSnr)
+
+/**************************************************************************************
+ * 函数名称：MFRC_ReadReg
+ * 功能描述：读一个寄存器
+ * 入口参数：-addr:待读的寄存器地址
+ * 出口参数：无
+ * 返 回 值：-data:读到寄存器的数据
+ * 说    明：无
+ ***************************************************************************************/
+uint8_t MFRC_ReadReg(uint8_t addr)
 {
-    char status;
-    unsigned char i;
-    unsigned int unLen;
-    unsigned char ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = PICC_ANTICOLL1;
-    ucComMF522Buf[1] = 0x70;
-    ucComMF522Buf[6] = 0;
-    for (i = 0; i < 4; i++)
-    {
-        ucComMF522Buf[i + 2] = *(pSnr + i);
-        ucComMF522Buf[6] ^= *(pSnr + i);
-    }
-    CalulateCRC(ucComMF522Buf, 7, &ucComMF522Buf[7]);
-    ClearBitMask(Status2Reg, 0x08);
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 9, ucComMF522Buf, &unLen);
-    if ((status == MI_OK) && (unLen == 0x18))
-    {
-        status = MI_OK;
-    }
-    else
-    {
-        status = MI_ERR;
-    }
-    return status;
+    uint8_t AddrByte, data;
+    AddrByte = ((addr << 1) & 0x7E) | 0x80; // 求出地址字节
+    RS522_NSS(0);                           // NSS拉低
+    SPI2_RW_Byte(AddrByte);                 // 写地址字节
+    data = SPI2_RW_Byte(0x00);              // 读数据
+    RS522_NSS(1);                           // NSS拉高
+    return data;
 }
-// 功    能：验证卡片密码
-// 参数说明: auth_mode[IN]: 密码验证模式
-//                  0x60 = 验证A密钥
-//                  0x61 = 验证B密钥
-//           addr[IN]：块地址
-//           pKey[IN]：密码
-//           pSnr[IN]：卡片序列号，4字节
-// 返    回: 成功返回MI_OK
-char PcdAuthState(unsigned char auth_mode, unsigned char addr, unsigned char *pKey, unsigned char *pSnr)
+
+/**************************************************************************************
+ * 函数名称：MFRC_SetBitMask
+ * 功能描述：设置寄存器的位
+ * 入口参数：-addr:待设置的寄存器地址
+ *           -mask:待设置寄存器的位(可同时设置多个bit)
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void MFRC_SetBitMask(uint8_t addr, uint8_t mask)
 {
-    char status;
-    unsigned int unLen;
-    unsigned char i, ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = auth_mode;
-    ucComMF522Buf[1] = addr;
-    for (i = 0; i < 6; i++)
-    {
-        ucComMF522Buf[i + 2] = *(pKey + i);
-    }
-    for (i = 0; i < 6; i++)
-    {
-        ucComMF522Buf[i + 8] = *(pSnr + i);
-    }
-    status = PcdComMF522(PCD_AUTHENT, ucComMF522Buf, 12, ucComMF522Buf, &unLen);
-    if ((status != MI_OK) || (!(ReadRawRC(Status2Reg) & 0x08)))
-    {
-        status = MI_ERR;
-    }
-    return status;
+    uint8_t temp;
+    temp = MFRC_ReadReg(addr);        // 先读回寄存器的值
+    MFRC_WriteReg(addr, temp | mask); // 处理过的数据再写入寄存器
 }
-// 功    能：读取M1卡一块数据
-// 参数说明: addr[IN]：块地址
-//           p [OUT]：读出的数据，16字节
-// 返    回: 成功返回MI_OK
-char PcdRead(unsigned char addr, unsigned char *pData)
-{
-    char status;
-    unsigned int unLen;
-    unsigned char i, ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = PICC_READ;
-    ucComMF522Buf[1] = addr;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
 
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-    if ((status == MI_OK) && (unLen == 0x90))
-    {
-        for (i = 0; i < 16; i++)
-        {
-            *(pData + i) = ucComMF522Buf[i];
-        }
-    }
-    else
-    {
-        status = MI_ERR;
-    }
-    return status;
+/**************************************************************************************
+ * 函数名称：MFRC_ClrBitMask
+ * 功能描述：清除寄存器的位
+ * 入口参数：-addr:待清除的寄存器地址
+ *           -mask:待清除寄存器的位(可同时清除多个bit)
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void MFRC_ClrBitMask(uint8_t addr, uint8_t mask)
+{
+    uint8_t temp;
+    temp = MFRC_ReadReg(addr);         // 先读回寄存器的值
+    MFRC_WriteReg(addr, temp & ~mask); // 处理过的数据再写入寄存器
 }
-// 功    能：写数据到M1卡一块
-// 参数说明: addr[IN]：块地址
-//           p [IN]：写入的数据，16字节
-// 返    回: 成功返回MI_OK
-char PcdWrite(unsigned char addr, unsigned char *pData)
+
+/**************************************************************************************
+ * 函数名称：MFRC_CalulateCRC
+ * 功能描述：用MFRC计算CRC结果
+ * 入口参数：-pInData：带进行CRC计算的数据
+ *           -len：带进行CRC计算的数据长度
+ *           -pOutData：CRC计算结果
+ * 出口参数：-pOutData：CRC计算结果
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void MFRC_CalulateCRC(uint8_t *pInData, uint8_t len, uint8_t *pOutData)
 {
-    char status;
-    unsigned int unLen;
-    unsigned char i, ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = PICC_WRITE;
-    ucComMF522Buf[1] = addr;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-    if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
+    // 0xc1 1        2           pInData[2]
+    uint8_t temp;
+    uint32_t i;
+    MFRC_ClrBitMask(MFRC_DivIrqReg, 0x04);     // 使能CRC中断
+    MFRC_WriteReg(MFRC_CommandReg, MFRC_IDLE); // 取消当前命令的执行
+    MFRC_SetBitMask(MFRC_FIFOLevelReg, 0x80);  // 清除FIFO及其标志位
+    for (i = 0; i < len; i++)                  // 将待CRC计算的数据写入FIFO
     {
-        status = MI_ERR;
+        MFRC_WriteReg(MFRC_FIFODataReg, *(pInData + i));
     }
-    if (status == MI_OK)
-    {
-        for (i = 0; i < 16; i++)
-        {
-            ucComMF522Buf[i] = *(pData + i);
-        }
-        CalulateCRC(ucComMF522Buf, 16, &ucComMF522Buf[16]);
-
-        status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 18, ucComMF522Buf, &unLen);
-        if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
-        {
-            status = MI_ERR;
-        }
-    }
-    return status;
-}
-// 功    能：扣款和充值
-// 参数说明: dd_mode[IN]：命令字
-//                0xC0 = 扣款
-//                0xC1 = 充值
-//           addr[IN]：钱包地址
-//           pValue[IN]：4字节增(减)值，低位在前
-// 返    回: 成功返回MI_OK
-char PcdValue(unsigned char dd_mode, unsigned char addr, unsigned char *pValue)
-{
-    char status;
-    unsigned int unLen;
-    unsigned char i, ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = dd_mode;
-    ucComMF522Buf[1] = addr;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-
-    if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
-    {
-        status = MI_ERR;
-    }
-    if (status == MI_OK)
-    {
-        for (i = 0; i < 16; i++)
-        {
-            ucComMF522Buf[i] = *(pValue + i);
-        }
-        CalulateCRC(ucComMF522Buf, 4, &ucComMF522Buf[4]);
-        unLen = 0;
-        status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 6, ucComMF522Buf, &unLen);
-        if (status != MI_ERR)
-        {
-            status = MI_OK;
-        }
-    }
-    if (status == MI_OK)
-    {
-        ucComMF522Buf[0] = PICC_TRANSFER;
-        ucComMF522Buf[1] = addr;
-        CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-
-        status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-
-        if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
-        {
-            status = MI_ERR;
-        }
-    }
-    return status;
-}
-// 功    能：备份钱包
-// 参数说明: sourceaddr[IN]：源地址
-//           goaladdr[IN]：目标地址
-// 返    回: 成功返回MI_OK
-char PcdBakValue(unsigned char sourceaddr, unsigned char goaladdr)
-{
-    char status;
-    unsigned int unLen;
-    unsigned char ucComMF522Buf[MAXRLEN];
-    ucComMF522Buf[0] = PICC_RESTORE;
-    ucComMF522Buf[1] = sourceaddr;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-    if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
-    {
-        status = MI_ERR;
-    }
-    if (status == MI_OK)
-    {
-        ucComMF522Buf[0] = 0;
-        ucComMF522Buf[1] = 0;
-        ucComMF522Buf[2] = 0;
-        ucComMF522Buf[3] = 0;
-        CalulateCRC(ucComMF522Buf, 4, &ucComMF522Buf[4]);
-        status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 6, ucComMF522Buf, &unLen);
-        if (status != MI_ERR)
-        {
-            status = MI_OK;
-        }
-    }
-    if (status != MI_OK)
-    {
-        return MI_ERR;
-    }
-    ucComMF522Buf[0] = PICC_TRANSFER;
-    ucComMF522Buf[1] = goaladdr;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-    status = PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-    if ((status != MI_OK) || (unLen != 4) || ((ucComMF522Buf[0] & 0x0F) != 0x0A))
-    {
-        status = MI_ERR;
-    }
-    return status;
-}
-// 功    能：命令卡片进入休眠状态
-// 返    回: 成功返回MI_OK
-char PcdHalt(void)
-{
-    // char status;
-    unsigned int unLen;
-    unsigned char ucComMF522Buf[MAXRLEN];
-
-    ucComMF522Buf[0] = PICC_HALT;
-    ucComMF522Buf[1] = 0;
-    CalulateCRC(ucComMF522Buf, 2, &ucComMF522Buf[2]);
-
-    PcdComMF522(PCD_TRANSCEIVE, ucComMF522Buf, 4, ucComMF522Buf, &unLen);
-
-    return MI_OK;
-}
-// 用MF522计算CRC16函数
-void CalulateCRC(unsigned char *pIndata, unsigned char len, unsigned char *pOutData)
-{
-    unsigned char i, n;
-    ClearBitMask(DivIrqReg, 0x04);
-    WriteRawRC(CommandReg, PCD_IDLE);
-    SetBitMask(FIFOLevelReg, 0x80);
-    for (i = 0; i < len; i++)
-    {
-        WriteRawRC(FIFODataReg, *(pIndata + i));
-    }
-    WriteRawRC(CommandReg, PCD_CALCCRC);
-    i = 0xFF;
+    MFRC_WriteReg(MFRC_CommandReg, MFRC_CALCCRC); // 执行CRC计算
+    i = 100000;
     do
     {
-        n = ReadRawRC(DivIrqReg);
+        temp = MFRC_ReadReg(MFRC_DivIrqReg); // 读取DivIrqReg寄存器的值
         i--;
-    } while ((i != 0) && !(n & 0x04));
-    pOutData[0] = ReadRawRC(CRCResultRegL);
-    pOutData[1] = ReadRawRC(CRCResultRegM);
+    } while ((i != 0) && !(temp & 0x04)); // 等待CRC计算完成
+    pOutData[0] = MFRC_ReadReg(MFRC_CRCResultRegL); // 读取CRC计算结果
+    pOutData[1] = MFRC_ReadReg(MFRC_CRCResultRegM);
 }
-// 功    能：复位RC522
-// 返    回: 成功返回MI_OK
-char PcdReset(void)
-{
-    RC522_RST_HIGH;
-    delay_us(10);
-    RC522_RST_LOW;
-    HAL_Delay(60);
-    RC522_RST_HIGH;
-    delay_us(500);
-    WriteRawRC(CommandReg, PCD_RESETPHASE);
-    HAL_Delay(2);
 
-    WriteRawRC(ModeReg, 0x3D);
-    WriteRawRC(TReloadRegL, 30);
-    WriteRawRC(TReloadRegH, 0);
-    WriteRawRC(TModeReg, 0x8D);
-    WriteRawRC(TPrescalerReg, 0x3E);
-    WriteRawRC(TxAutoReg, 0x40);
+/**************************************************************************************
+ * 函数名称：MFRC_CmdFrame
+ * 功能描述：MFRC522和ISO14443A卡通讯的命令帧函数
+ * 入口参数：-cmd：MFRC522命令字
+ *           -pIndata：MFRC522发送给MF1卡的数据的缓冲区首地址
+ *           -InLenByte：发送数据的字节长度
+ *           -pOutdata：用于接收MF1卡片返回数据的缓冲区首地址
+ *           -pOutLenBit：MF1卡返回数据的位长度
+ * 出口参数：-pOutdata：用于接收MF1卡片返回数据的缓冲区首地址
+ *           -pOutLenBit：用于MF1卡返回数据位长度的首地址
+ * 返 回 值：-status：错误代码(MFRC_OK、MFRC_NOTAGERR、MFRC_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char MFRC_CmdFrame(uint8_t cmd, uint8_t *pInData, uint8_t InLenByte, uint8_t *pOutData, uint16_t *pOutLenBit)
+{
+    uint8_t lastBits;
+    uint8_t n;
+    uint32_t i;
+    char status = MFRC_ERR;
+    uint8_t irqEn = 0x00;
+    uint8_t waitFor = 0x00;
 
-    ClearBitMask(TestPinEnReg, 0x80);
-    WriteRawRC(TxAutoReg, 0x40);
-
-    return MI_OK;
-}
-// 功    能：读RC632寄存器
-// 参数说明：Address[IN]:寄存器地址
-// 返    回：读出的值
-unsigned char ReadRawRC(unsigned char Address)
-{
-    unsigned char ucAddr;
-    unsigned char ucResult = 0;
-    ucAddr = ((Address << 1) & 0x7E) | 0x80;
-    HAL_Delay(1);
-    RC522_ENABLE;
-    // SPI_WriteNBytes(SPI1, &ucAddr, 1);  // 向总线写多个数据
-    // SPI_ReadNBytes(SPI1, &ucResult, 1); // 向总线读多个数据
-    HAL_SPI_Transmit(&hspi2, &ucAddr, 1, 0xff);
-    HAL_SPI_Receive(&hspi2, &ucResult, 1, 0xff);
-    RC522_DISABLE;
-    return ucResult;
-}
-// 功    能：写RC632寄存器
-// 参数说明：Address[IN]:寄存器地址
-//           value[IN]:写入的值
-void WriteRawRC(unsigned char Address, unsigned char value)
-{
-    unsigned char ucAddr;
-    uint8_t write_buffer[2] = {0};
-    ucAddr = ((Address << 1) & 0x7E);
-    write_buffer[0] = ucAddr;
-    write_buffer[1] = value;
-    HAL_Delay(1);
-    RC522_ENABLE;
-    // SPI_WriteNBytes(SPI1, write_buffer, 2);
-    HAL_SPI_Transmit(&hspi2, write_buffer, 2, 0xff);
-    RC522_DISABLE;
-}
-// 功    能：置RC522寄存器位
-// 参数说明：reg[IN]:寄存器地址
-//           mask[IN]:置位值
-void SetBitMask(unsigned char reg, unsigned char mask)
-{
-    char tmp = 0x0;
-    tmp = ReadRawRC(reg);        // 读RC632寄存器
-    WriteRawRC(reg, tmp | mask); // set bit mask
-}
-// 功    能：清RC522寄存器位
-// 参数说明：reg[IN]:寄存器地址
-//           mask[IN]:清位值
-void ClearBitMask(unsigned char reg, unsigned char mask)
-{
-    char tmp = 0x0;
-    tmp = ReadRawRC(reg);
-    WriteRawRC(reg, tmp & ~mask); // clear bit mask
-}
-// 功    能：通过RC522和ISO14443卡通讯
-// 参数说明：Command[IN]:RC522命令字
-//           pIn [IN]:通过RC522发送到卡片的数据
-//           InLenByte[IN]:发送数据的字节长度
-//           pOut [OUT]:接收到的卡片返回数据
-//           *pOutLenBit[OUT]:返回数据的位长度
-char PcdComMF522(unsigned char Command,
-                 unsigned char *pInData,
-                 unsigned char InLenByte,
-                 unsigned char *pOutData,
-                 unsigned int *pOutLenBit)
-{
-    char status = MI_ERR;
-    unsigned char irqEn = 0x00;
-    unsigned char waitFor = 0x00;
-    unsigned char lastBits;
-    unsigned char n;
-    unsigned int i;
-    switch (Command)
+    /*根据命令设置标志位*/
+    switch (cmd)
     {
-    case PCD_AUTHENT:
+    case MFRC_AUTHENT: // Mifare认证
         irqEn = 0x12;
-        waitFor = 0x10;
+        waitFor = 0x10; // idleIRq中断标志
         break;
-    case PCD_TRANSCEIVE:
+    case MFRC_TRANSCEIVE: // 发送并接收数据
         irqEn = 0x77;
-        waitFor = 0x30;
-        break;
-    default:
+        waitFor = 0x30; // RxIRq和idleIRq中断标志
         break;
     }
-    WriteRawRC(ComIEnReg, irqEn | 0x80);
-    ClearBitMask(ComIrqReg, 0x80);
-    WriteRawRC(CommandReg, PCD_IDLE);
-    SetBitMask(FIFOLevelReg, 0x80);
-    for (i = 0; i < InLenByte; i++)
+
+    /*发送命令帧前准备*/
+    MFRC_WriteReg(MFRC_ComIEnReg, irqEn | 0x80); // 开中断
+    MFRC_ClrBitMask(MFRC_ComIrqReg, 0x80);       // 清除中断标志位SET1
+    MFRC_WriteReg(MFRC_CommandReg, MFRC_IDLE);   // 取消当前命令的执行
+    MFRC_SetBitMask(MFRC_FIFOLevelReg, 0x80);    // 清除FIFO缓冲区及其标志位
+
+    /*发送命令帧*/
+    for (i = 0; i < InLenByte; i++) // 写入命令参数
     {
-        WriteRawRC(FIFODataReg, pInData[i]);
+        MFRC_WriteReg(MFRC_FIFODataReg, pInData[i]);
     }
-    WriteRawRC(CommandReg, Command);
-    if (Command == PCD_TRANSCEIVE)
+    MFRC_WriteReg(MFRC_CommandReg, cmd); // 执行命令
+    if (cmd == MFRC_TRANSCEIVE)
     {
-        SetBitMask(BitFramingReg, 0x80);
+        MFRC_SetBitMask(MFRC_BitFramingReg, 0x80); // 启动发送
     }
-    i = 800;
+    i = 300000; // 根据时钟频率调整,操作M1卡最大等待时间25ms
     do
     {
-        n = ReadRawRC(ComIrqReg);
+        n = MFRC_ReadReg(MFRC_ComIrqReg);
         i--;
-    } while ((i != 0) && !(n & 0x01) && !(n & waitFor));
-    ClearBitMask(BitFramingReg, 0x80);
+    } while ((i != 0) && !(n & 0x01) && !(n & waitFor)); // 等待命令完成
+    MFRC_ClrBitMask(MFRC_BitFramingReg, 0x80); // 停止发送
+
+    /*处理接收的数据*/
     if (i != 0)
     {
-        if (!(ReadRawRC(ErrorReg) & 0x1B))
+        if (!(MFRC_ReadReg(MFRC_ErrorReg) & 0x1B))
         {
-            status = MI_OK;
+            status = MFRC_OK;
             if (n & irqEn & 0x01)
             {
-                status = MI_NOTAGERR;
+                status = MFRC_NOTAGERR;
             }
-            if (Command == PCD_TRANSCEIVE)
+            if (cmd == MFRC_TRANSCEIVE)
             {
-                n = ReadRawRC(FIFOLevelReg);
-                lastBits = ReadRawRC(ControlReg) & 0x07;
+                n = MFRC_ReadReg(MFRC_FIFOLevelReg);
+                lastBits = MFRC_ReadReg(MFRC_ControlReg) & 0x07;
                 if (lastBits)
                 {
                     *pOutLenBit = (n - 1) * 8 + lastBits;
@@ -587,52 +221,568 @@ char PcdComMF522(unsigned char Command,
                 {
                     n = 1;
                 }
-                if (n > MAXRLEN)
+                if (n > MFRC_MAXRLEN)
                 {
-                    n = MAXRLEN;
+                    n = MFRC_MAXRLEN;
                 }
                 for (i = 0; i < n; i++)
                 {
-                    pOutData[i] = ReadRawRC(FIFODataReg);
+                    pOutData[i] = MFRC_ReadReg(MFRC_FIFODataReg);
                 }
             }
         }
         else
         {
-            status = MI_ERR;
+            status = MFRC_ERR;
         }
     }
-    SetBitMask(ControlReg, 0x80); // stop timer now
-    WriteRawRC(CommandReg, PCD_IDLE);
+
+    MFRC_SetBitMask(MFRC_ControlReg, 0x80);    // 停止定时器运行
+    MFRC_WriteReg(MFRC_CommandReg, MFRC_IDLE); // 取消当前命令的执行
+
     return status;
 }
-// 开启天线
-// 每次启动或关闭天险发射之间应至少有1ms的间隔
-void PcdAntennaOn(void)
+
+/**************************************************************************************
+ * 函数名称：PCD_Reset
+ * 功能描述：PCD复位
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void PCD_Reset(void)
 {
-    unsigned char i;
-    i = ReadRawRC(TxControlReg);
-    if (!(i & 0x03))
-    {
-        SetBitMask(TxControlReg, 0x03);
-    }
-}
-// 关闭天线
-void PcdAntennaOff(void)
-{
-    ClearBitMask(TxControlReg, 0x03);
+    /*硬复位*/
+    RS522_RST(1); // 用到复位引脚
+    osDelay(2);
+    RS522_RST(0);
+    osDelay(2);
+    RS522_RST(1);
+    osDelay(2);
+
+    /*软复位*/
+    MFRC_WriteReg(MFRC_CommandReg, MFRC_RESETPHASE);
+    osDelay(2);
+
+    /*复位后的初始化配置*/
+    MFRC_WriteReg(MFRC_ModeReg, 0x3D);   // CRC初始值0x6363
+    MFRC_WriteReg(MFRC_TReloadRegL, 30); // 定时器重装值
+    MFRC_WriteReg(MFRC_TReloadRegH, 0);
+    MFRC_WriteReg(MFRC_TModeReg, 0x8D);      // 定时器设置
+    MFRC_WriteReg(MFRC_TPrescalerReg, 0x3E); // 定时器预分频值
+    MFRC_WriteReg(MFRC_TxAutoReg, 0x40);     // 100%ASK
+
+    PCD_AntennaOff(); // 关天线
+    osDelay(2);
+    PCD_AntennaOn(); // 开天线
+
+    printf("初始化完成\n");
 }
 
-void RC522_Config(unsigned char Card_Type)
+/**************************************************************************************
+ * 函数名称：PCD_AntennaOn
+ * 功能描述：开启天线,使能PCD发送能量载波信号
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：每次开启或关闭天线之间应至少有1ms的间隔
+ ***************************************************************************************/
+void PCD_AntennaOn(void)
 {
-    ClearBitMask(Status2Reg, 0x08);
-    WriteRawRC(ModeReg, 0x3D);
-    WriteRawRC(RxSelReg, 0x86);
-    WriteRawRC(RFCfgReg, 0x7F);
-    WriteRawRC(TReloadRegL, 30);
-    WriteRawRC(TReloadRegH, 0);
-    WriteRawRC(TModeReg, 0x8D);
-    WriteRawRC(TPrescalerReg, 0x3E);
-    HAL_Delay(5);
-    PcdAntennaOn();
+    uint8_t temp;
+    temp = MFRC_ReadReg(MFRC_TxControlReg);
+    if (!(temp & 0x03))
+    {
+        MFRC_SetBitMask(MFRC_TxControlReg, 0x03);
+    }
+}
+
+/**************************************************************************************
+ * 函数名称：PCD_AntennaOff
+ * 功能描述：关闭天线,失能PCD发送能量载波信号
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：每次开启或关闭天线之间应至少有1ms的间隔
+ ***************************************************************************************/
+void PCD_AntennaOff(void)
+{
+    MFRC_ClrBitMask(MFRC_TxControlReg, 0x03);
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Init
+ * 功能描述：读写器初始化
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：无
+ * 说    明：无
+ ***************************************************************************************/
+void PCD_Init(void)
+{
+    MFRC_Init();      // MFRC管脚配置
+    PCD_Reset();      // PCD复位  并初始化配置
+    PCD_AntennaOff(); // 关闭天线
+    PCD_AntennaOn();  // 开启天线
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Request
+ * 功能描述：寻卡
+ * 入口参数： -RequestMode：讯卡方式
+ *                             PICC_REQIDL：寻天线区内未进入休眠状态
+ *                 PICC_REQALL：寻天线区内全部卡
+ *               -pCardType：用于保存卡片类型
+ * 出口参数：-pCardType：卡片类型
+ *                               0x4400：Mifare_UltraLight
+ *                       0x0400：Mifare_One(S50)
+ *                       0x0200：Mifare_One(S70)
+ *                       0x0800：Mifare_Pro(X)
+ *                       0x4403：Mifare_DESFire
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_Request(uint8_t RequestMode, uint8_t *pCardType)
+{
+    int status;
+    uint16_t unLen;
+    uint8_t CmdFrameBuf[MFRC_MAXRLEN];
+
+    MFRC_ClrBitMask(MFRC_Status2Reg, 0x08);   // 关内部温度传感器
+    MFRC_WriteReg(MFRC_BitFramingReg, 0x07);  // 存储模式，发送模式，是否启动发送等
+    MFRC_SetBitMask(MFRC_TxControlReg, 0x03); // 配置调制信号13.56MHZ
+
+    CmdFrameBuf[0] = RequestMode;
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 1, CmdFrameBuf, &unLen);
+
+    if ((status == PCD_OK) && (unLen == 0x10))
+    {
+        *pCardType = CmdFrameBuf[0];
+        *(pCardType + 1) = CmdFrameBuf[1];
+    }
+
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Anticoll
+ * 功能描述：防冲突,获取卡号
+ * 入口参数：-pSnr：用于保存卡片序列号,4字节
+ * 出口参数：-pSnr：卡片序列号,4字节
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_Anticoll(uint8_t *pSnr)
+{
+    char status;
+    uint8_t i, snr_check = 0;
+    uint16_t unLen;
+    uint8_t CmdFrameBuf[MFRC_MAXRLEN];
+
+    MFRC_ClrBitMask(MFRC_Status2Reg, 0x08);
+    MFRC_WriteReg(MFRC_BitFramingReg, 0x00);
+    MFRC_ClrBitMask(MFRC_CollReg, 0x80);
+
+    CmdFrameBuf[0] = PICC_ANTICOLL1;
+    CmdFrameBuf[1] = 0x20;
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 2, CmdFrameBuf, &unLen);
+
+    if (status == PCD_OK)
+    {
+        for (i = 0; i < 4; i++)
+        {
+            *(pSnr + i) = CmdFrameBuf[i];
+            snr_check ^= CmdFrameBuf[i];
+        }
+        if (snr_check != CmdFrameBuf[i])
+        {
+            status = PCD_ERR;
+        }
+    }
+
+    MFRC_SetBitMask(MFRC_CollReg, 0x80);
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Select
+ * 功能描述：选卡
+ * 入口参数：-pSnr：卡片序列号,4字节
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_Select(uint8_t *pSnr)
+{
+    char status;
+    uint8_t i;
+    uint16_t unLen;
+    uint8_t CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = PICC_ANTICOLL1;
+    CmdFrameBuf[1] = 0x70;
+    CmdFrameBuf[6] = 0;
+    for (i = 0; i < 4; i++)
+    {
+        CmdFrameBuf[i + 2] = *(pSnr + i);
+        CmdFrameBuf[6] ^= *(pSnr + i);
+    }
+    MFRC_CalulateCRC(CmdFrameBuf, 7, &CmdFrameBuf[7]);
+
+    MFRC_ClrBitMask(MFRC_Status2Reg, 0x08);
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 9, CmdFrameBuf, &unLen);
+
+    if ((status == PCD_OK) && (unLen == 0x18))
+    {
+        status = PCD_OK;
+    }
+    else
+    {
+        status = PCD_ERR;
+    }
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_AuthState
+ * 功能描述：验证卡片密码
+ * 入口参数：-AuthMode：验证模式
+ *                   PICC_AUTHENT1A：验证A密码
+ *                   PICC_AUTHENT1B：验证B密码
+ *           -BlockAddr：块地址(0~63)
+ *           -pKey：密码
+ *           -pSnr：卡片序列号,4字节
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：验证密码时,以扇区为单位,BlockAddr参数可以是同一个扇区的任意块
+ ***************************************************************************************/
+char PCD_AuthState(uint8_t AuthMode, uint8_t BlockAddr, uint8_t *pKey, uint8_t *pSnr)
+{
+    char status;
+    uint16_t unLen;
+    uint8_t i, CmdFrameBuf[MFRC_MAXRLEN];
+    CmdFrameBuf[0] = AuthMode;
+    CmdFrameBuf[1] = BlockAddr;
+    for (i = 0; i < 6; i++)
+    {
+        CmdFrameBuf[i + 2] = *(pKey + i);
+    }
+    for (i = 0; i < 4; i++)
+    {
+        CmdFrameBuf[i + 8] = *(pSnr + i);
+    }
+
+    status = MFRC_CmdFrame(MFRC_AUTHENT, CmdFrameBuf, 12, CmdFrameBuf, &unLen);
+    if ((status != PCD_OK) || (!(MFRC_ReadReg(MFRC_Status2Reg) & 0x08)))
+    {
+        status = PCD_ERR;
+    }
+
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_WriteBlock
+ * 功能描述：读MF1卡数据块
+ * 入口参数：-BlockAddr：块地址
+ *           -pData: 用于保存待写入的数据,16字节
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_WriteBlock(uint8_t BlockAddr, uint8_t *pData)
+{
+    char status;
+    uint16_t unLen;
+    uint8_t i, CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = PICC_WRITE;
+    CmdFrameBuf[1] = BlockAddr;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+
+    if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+    {
+        status = PCD_ERR;
+    }
+
+    if (status == PCD_OK)
+    {
+        for (i = 0; i < 16; i++)
+        {
+            CmdFrameBuf[i] = *(pData + i);
+        }
+        MFRC_CalulateCRC(CmdFrameBuf, 16, &CmdFrameBuf[16]);
+
+        status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 18, CmdFrameBuf, &unLen);
+
+        if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+        {
+            status = PCD_ERR;
+        }
+    }
+
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_ReadBlock
+ * 功能描述：读MF1卡数据块
+ * 入口参数：-BlockAddr：块地址
+ *           -pData: 用于保存读出的数据,16字节
+ * 出口参数：-pData: 用于保存读出的数据,16字节
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_ReadBlock(uint8_t BlockAddr, uint8_t *pData)
+{
+    char status;
+    uint16_t unLen;
+    uint8_t i, CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = PICC_READ;
+    CmdFrameBuf[1] = BlockAddr;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+    if ((status == PCD_OK) && (unLen == 0x90))
+    {
+        for (i = 0; i < 16; i++)
+        {
+            *(pData + i) = CmdFrameBuf[i];
+        }
+    }
+    else
+    {
+        status = PCD_ERR;
+    }
+
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Value
+ * 功能描述：对MF1卡数据块增减值操作
+ * 入口参数：
+ *           -BlockAddr：块地址
+ *           -pValue：四字节增值的值,低位在前
+ *           -mode：数值块操作模式
+ *                  PICC_INCREMENT：增值
+ *                PICC_DECREMENT：减值
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_Value(uint8_t mode, uint8_t BlockAddr, uint8_t *pValue)
+{
+    // 0XC1        1           Increment[4]={0x03, 0x01, 0x01, 0x01};
+    char status;
+    uint16_t unLen;
+    uint8_t i, CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = mode;
+    CmdFrameBuf[1] = BlockAddr;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+
+    if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+    {
+        status = PCD_ERR;
+    }
+
+    if (status == PCD_OK)
+    {
+        for (i = 0; i < 16; i++)
+        {
+            CmdFrameBuf[i] = *(pValue + i);
+        }
+        MFRC_CalulateCRC(CmdFrameBuf, 4, &CmdFrameBuf[4]);
+        unLen = 0;
+        status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 6, CmdFrameBuf, &unLen);
+        if (status != PCD_ERR)
+        {
+            status = PCD_OK;
+        }
+    }
+
+    if (status == PCD_OK)
+    {
+        CmdFrameBuf[0] = PICC_TRANSFER;
+        CmdFrameBuf[1] = BlockAddr;
+        MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+
+        status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+
+        if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+        {
+            status = PCD_ERR;
+        }
+    }
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_BakValue
+ * 功能描述：备份钱包(块转存)
+ * 入口参数：-sourceBlockAddr：源块地址
+ *                -goalBlockAddr   ：目标块地址
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：只能在同一个扇区内转存
+ ***************************************************************************************/
+char PCD_BakValue(uint8_t sourceBlockAddr, uint8_t goalBlockAddr)
+{
+    char status;
+    uint16_t unLen;
+    uint8_t CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = PICC_RESTORE;
+    CmdFrameBuf[1] = sourceBlockAddr;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+    if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+    {
+        status = PCD_ERR;
+    }
+
+    if (status == PCD_OK)
+    {
+        CmdFrameBuf[0] = 0;
+        CmdFrameBuf[1] = 0;
+        CmdFrameBuf[2] = 0;
+        CmdFrameBuf[3] = 0;
+        MFRC_CalulateCRC(CmdFrameBuf, 4, &CmdFrameBuf[4]);
+        status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 6, CmdFrameBuf, &unLen);
+        if (status != PCD_ERR)
+        {
+            status = PCD_OK;
+        }
+    }
+
+    if (status != PCD_OK)
+    {
+        return PCD_ERR;
+    }
+
+    CmdFrameBuf[0] = PICC_TRANSFER;
+    CmdFrameBuf[1] = goalBlockAddr;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+    if ((status != PCD_OK) || (unLen != 4) || ((CmdFrameBuf[0] & 0x0F) != 0x0A))
+    {
+        status = PCD_ERR;
+    }
+
+    return status;
+}
+
+/***************************************************************************************
+ * 函数名称：PCD_Halt
+ * 功能描述：命令卡片进入休眠状态
+ * 入口参数：无
+ * 出口参数：无
+ * 返 回 值：-status：错误代码(PCD_OK、PCD_NOTAGERR、PCD_ERR)
+ * 说    明：无
+ ***************************************************************************************/
+char PCD_Halt(void)
+{
+    char status;
+    uint16_t unLen;
+    uint8_t CmdFrameBuf[MFRC_MAXRLEN];
+
+    CmdFrameBuf[0] = PICC_HALT;
+    CmdFrameBuf[1] = 0;
+    MFRC_CalulateCRC(CmdFrameBuf, 2, &CmdFrameBuf[2]);
+
+    status = MFRC_CmdFrame(MFRC_TRANSCEIVE, CmdFrameBuf, 4, CmdFrameBuf, &unLen);
+
+    return status;
+}
+
+uint8_t readUid[5]; // 卡号
+uint8_t CT[3];      // 卡类型
+uint8_t DATA[16];   // 存放数据
+
+uint8_t KEY_A[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+uint8_t KEY_B[6] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+unsigned char buf[16] = {0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0xff, 0x07, 0x80, 0x69, 0x18, 0x17, 0x16, 0x15, 0x14, 0x13};
+
+uint8_t status;
+uint8_t addr = 0x01 * 4 + 0x03; // 总共16个扇区。一个扇区4个块，从0开始算，表示第一扇区第三块
+
+void Cardcompare(void)
+{
+    uint8_t i;
+    // status = PCD_WriteBlock(addr, buf);
+    status = PCD_Request(0x52, CT); // 找到卡返回0
+    if (!status)                    // 寻卡成功
+    {
+        status = PCD_ERR;
+        status = PCD_Anticoll(readUid); // 防冲撞
+    }
+
+    if (!status) // 防冲撞成功
+    {
+        status = PCD_ERR;
+        printf("卡的类型为：%x%x%x\r\n", CT[0], CT[1], CT[2]); /* 读取卡的类型 */
+        printf("卡号：%x-%x-%x-%x\r\n", readUid[0], readUid[1], readUid[2], readUid[3]);
+        HAL_Delay(1000);
+        status = PCD_Select(readUid); /* 选卡 */
+    }
+
+    if (!status) // 选卡成功
+    {
+        status = PCD_ERR;
+        // 验证A密钥 块地址 密码 SN
+        status = PCD_AuthState(PICC_AUTHENT1A, addr, KEY_A, readUid);
+        if (status == PCD_OK) // 验证A成功
+        {
+            printf("A密钥验证成功\r\n");
+            HAL_Delay(1000);
+        }
+        else
+        {
+            printf("A密钥验证失败\r\n");
+            HAL_Delay(1000);
+        }
+
+        // 验证B密钥 块地址 密码 SN
+        status = PCD_AuthState(PICC_AUTHENT1B, addr, KEY_B, readUid);
+        if (status == PCD_OK) // 验证B成功
+        {
+            printf("B密钥验证成功\r\n");
+        }
+        else
+        {
+            printf("B密钥验证失败\r\n");
+        }
+        HAL_Delay(1000);
+    }
+
+    if (status == PCD_OK) // 验证密码成功，接着读取3块
+    {
+        status = PCD_ERR;
+        status = PCD_ReadBlock(addr, DATA);
+
+        if (status == PCD_OK) // 读卡成功
+        {
+            printf("1扇区3块DATA:");
+            for (i = 0; i < 16; i++)
+            {
+                printf("%02x", DATA[i]);
+            }
+            printf("\r\n");
+        }
+        else
+        {
+            printf("读卡失败\r\n");
+        }
+        HAL_Delay(1000);
+    }
 }

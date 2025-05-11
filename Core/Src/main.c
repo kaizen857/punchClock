@@ -18,6 +18,7 @@
 /* USER CODE END Header */
 /* Includes ------------------------------------------------------------------*/
 #include "main.h"
+#include "RC522.h"
 #include "adc.h"
 #include "at24cxx.h"
 #include "dataStruct.h"
@@ -86,7 +87,6 @@ lv_ui guider_ui;
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-
 /* USER CODE END 0 */
 
 /**
@@ -136,17 +136,19 @@ int main(void)
 #ifdef WRITEMODE
     if (at24_isConnected())
     {
+        at24_eraseChip();
         uint16_t tmp = 5;
         UserInfo users[] = {{23125011044, "张三"},
                             {23125011045, "李四"},
                             {23125011046, "王五"},
                             {23125011047, "赵六"},
                             {23125011048, "钱七"}};
-        CheckInfo checks[] = {{23125011044, 202505050443, 202505050543},
-                              {23125011045, 202505050444, 202505050544},
-                              {23125011046, 202505050445, 202505050545},
-                              {23125011047, 202505050446, 202505050546},
-                              {23125011048, 202505050447, 202505050547}};
+        CheckInfo checks[] = {{23125011044, 569992346941980672, 569992346958757888},
+                              {23125011045, 569992346942046208, 569992346958823424},
+                              {23125011046, 569992346942111744, 569992346958888960},
+                              {23125011047, 569992346942177280, 569992346958954496},
+                              {23125011048, 569992346942242816, 569992346959020032}};
+
         at24_write(USER_INFO_LEN_ADDR, (uint8_t *)&tmp, 2, 1000);
         at24_write(CHECK_INFO_LEN_ADDR, (uint8_t *)&tmp, 2, 1000);
         at24_write(USER_INFO_ADDR, (uint8_t *)users, sizeof(users), 1000);
@@ -205,6 +207,7 @@ int main(void)
     events_init(&guider_ui);
     myEventInit(&guider_ui);
     myLVGL_UIInit();
+    PCD_Init();
     //  lv_demo_benchmark();
     /* USER CODE END 2 */
 
@@ -214,6 +217,7 @@ int main(void)
     {
         // loop();
         lv_task_handler();
+        RC522Scan();
         HAL_Delay(1);
         /* USER CODE END WHILE */
 

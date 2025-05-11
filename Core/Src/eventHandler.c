@@ -14,10 +14,6 @@
 static int hour = -1;
 static int minute = -1;
 
-// 分支优化
-#define likely(x) __builtin_expect(!!(x), 1)
-#define unlikely(x) __builtin_expect(!!(x), 0)
-
 void userInfoPanel_ImportFromSDcard_event_handler(lv_event_t *e) // 从SD卡导入
 {
     // TODO: 从SD卡导入
@@ -70,6 +66,7 @@ void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
     // 写入用户信息
     if (writeUserInfo(&info) && updateUserInfoList(&info))
     {
+        // TODO: 将信息写入NFC卡内
         lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！");
         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
@@ -77,48 +74,13 @@ void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
         // 清空输入框
         lv_textarea_set_text(guider_ui.MainMenuScreen_ta_1, "");
         lv_textarea_set_text(guider_ui.MainMenuScreen_ta_2, "");
+        updateUserInfoTable(&guider_ui);
     }
     else
     {
         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加失败!请重试");
         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
     }
-    // // TODO:确认添加新用户
-    // lv_event_code_t code = lv_event_get_code(e);
-    // switch (code)
-    // {
-    // case LV_EVENT_CLICKED:
-    // {
-    //     const char *name = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_1);
-    //     const char *id = lv_textarea_get_text(guider_ui.MainMenuScreen_ta_2);
-    //     if (name == NULL || id == NULL)
-    //     {
-    //         // TODO:输入为空
-    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "输入为空!请重试");
-    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
-    //         break;
-    //     }
-    //     uint64_t id_num = strtoull(id, NULL, 10);
-    //     UserInfo info = {id_num};
-    //     strncpy(info.Name, name, sizeof(info.Name) - 1);
-    //     if (writeUserInfo(&info) == true)
-    //     {
-    //         // 添加成功
-    //         lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
-    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！");
-    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
-    //         break;
-    //     }
-    //     else
-    //     {
-    //         // TODO:添加失败
-    //         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加失败!请重试");
-    //         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
-    //     }
-    // }
-    // default:
-    //     break;
-    // }
 }
 
 void changeTimePanel_ConfirmButton_event_handler(lv_event_t *e)
@@ -305,4 +267,8 @@ void myLVGL_UIInit(void)
     uint8_t month = DS3231_GetMonth();
     uint8_t day = DS3231_GetDate();
     lv_label_set_text_fmt(guider_ui.MainMenuScreen_calendar, "%04d/%02d/%02d", year, month, day);
+
+    initUserInfoTable(&guider_ui);
+
+    initCheckInfoTable(&guider_ui);
 }

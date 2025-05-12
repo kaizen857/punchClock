@@ -229,6 +229,10 @@ bool writeUserInfo(UserInfo *userInfo)
     }
     // 更新内存中的计数
     totalUserNum = newTotal;
+#ifdef DEBUG
+    printf("写入用户信息成功\n");
+    printf("总人数:%d", totalUserNum);
+#endif
     return true;
 }
 
@@ -633,19 +637,7 @@ uint8_t RC522WriteCard(uint8_t *Card_Data)
             }
         }
     }
-    // if (status == PCD_OK) // 验证密码成功，接着读取3块
-    // {
-    //     status = PCD_ERR;
-    //     status = PCD_WriteBlock(4, cardData); // 写数据
-    //     if (status == PCD_OK) {
-    //         printf("写数据成功\r\n");
-    //     }
-
-    //     // HAL_Delay(1000);
-    // }
-    if (status == PCD_OK) // 验证密码成功，接着读取3块
-    {
-    }
+    return status;
 }
 
 /**

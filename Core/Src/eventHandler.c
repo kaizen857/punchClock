@@ -1,11 +1,13 @@
 #include "eventHandler.h"
 #include "DS3231.h"
+#include "RC522.h"
 #include "dataStruct.h"
 #include "label/lv_label.h"
 #include "lv_event.h"
 #include "lv_obj.h"
 #include "lv_obj_event.h"
 #include "lv_types.h"
+#include "stm32f4xx_hal.h"
 #include "textarea/lv_textarea.h"
 #include "gui_guider.h"
 #include <stdlib.h>
@@ -68,13 +70,40 @@ void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
     {
         // TODO: 将信息写入NFC卡内
         lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
-        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！");
+        lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！\n请将卡靠近读卡器");
         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
-
+        uint8_t data[16];
+        memcpy(data, &id_num, sizeof(id_num));
+        uint16_t crc = calculateCRC16(data, sizeof(id_num));
+        data[9] = crc >> 8;
+        data[10] = crc & 0xFF;
+        uint8_t status;
+        status = RC522WriteCard(data);
+        while (true)
+        {
+            if (status == PCD_OK)
+            {
+                lv_label_set_text(guider_ui.MainMenuScreen_label_8, "写入成功！");
+                lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+                break;
+            }
+            else if (status == PCD_ERR)
+            {
+                lv_label_set_text(guider_ui.MainMenuScreen_label_8, "写入失败！请重试");
+                lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+            }
+            else if (status == PCD_NOTAGERR)
+            {
+                lv_label_set_text(guider_ui.MainMenuScreen_label_8, "请将卡靠近读卡器");
+                lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+            }
+            status = RC522WriteCard(data);
+            HAL_Delay(100);
+        }
         // 清空输入框
         lv_textarea_set_text(guider_ui.MainMenuScreen_ta_1, "");
         lv_textarea_set_text(guider_ui.MainMenuScreen_ta_2, "");
-        updateUserInfoTable(&guider_ui);
+        initUserInfoTable(&guider_ui);
     }
     else
     {

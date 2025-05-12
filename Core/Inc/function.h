@@ -50,7 +50,7 @@ void at24Init(void); // AT24初始化
 void LD2410BInit(void); // LD2410B初始化
 
 void setTime(uint16_t year, uint8_t month, uint8_t day, uint8_t hour, uint8_t minute); // 设置ds3231时间
-void getTime(Time *time); // 获取ds3231时间
+void getTime(Time *time);                                                              // 获取ds3231时间
 
 // 导出数据到SD卡
 uint8_t exportData(void);
@@ -73,5 +73,7 @@ bool updateCheckInfoTable(lv_ui *ui, CheckInfo *info); // 更新打卡信息表
 bool hasChecking(uint64_t cardID);                   // 查找打卡信息
 void newCheck(uint64_t cardID, uint64_t startTime);  // 新的打卡
 bool finishCheck(uint64_t cardID, uint64_t endTime); // 完成打卡
+
+int compareUserInfo(const void *a, const void *b); // 比较用户信息
 
 #endif

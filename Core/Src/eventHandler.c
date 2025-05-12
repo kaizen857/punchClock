@@ -2,12 +2,15 @@
 #include "DS3231.h"
 #include "RC522.h"
 #include "dataStruct.h"
+#include "ff.h"
 #include "label/lv_label.h"
 #include "lv_event.h"
 #include "lv_obj.h"
 #include "lv_obj_event.h"
 #include "lv_types.h"
+#include "main.h"
 #include "stm32f4xx_hal.h"
+#include "stm32f4xx_hal_gpio.h"
 #include "textarea/lv_textarea.h"
 #include "gui_guider.h"
 #include <stdlib.h>
@@ -18,7 +21,7 @@ static int minute = -1;
 
 void userInfoPanel_ImportFromSDcard_event_handler(lv_event_t *e) // 从SD卡导入
 {
-    // TODO: 从SD卡导入
+    // TODO: 从SD卡导入（不做）
 }
 
 void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
@@ -253,6 +256,70 @@ void CheckInfoPanel_ExportButton_event_handler(lv_event_t *e)
     case LV_EVENT_CLICKED:
     {
         // TODO:导出
+        if (HAL_GPIO_ReadPin(SD_CD_GPIO_Port, SD_CD_Pin) == GPIO_PIN_SET)
+        {
+            lv_label_set_text(guider_ui.MainMenuScreen_label_8, "请插入SD卡");
+            lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+        }
+        else
+        {
+            static FATFS myFatFs; // FatFs 文件系统对象; 这个结构体占用598字节，有点大，需用static修饰(存放在全局数据区), 避免stack溢出
+            static FIL myFile;    // 文件对象; 这个结构体占用570字节，有点大，需用static修饰(存放在全局数据区), 避免stack溢出
+            static FRESULT f_res; // 文件操作结果
+            static uint8_t buffer[64];
+            f_res = f_mount(&myFatFs, "0:", 1);
+            if (f_res == FR_OK)
+            {
+                f_res = f_open(&myFile, "0:checkInfo.csv", FA_CREATE_ALWAYS | FA_WRITE);
+                if (f_res == FR_OK)
+                {
+                    CheckInfo info = {0};
+                    uint16_t addr = CHECK_INFO_ADDR; // 从flash中读取数据
+                    for (int i = 0; i < totalCheckNum; i++)
+                    {
+                        if (at24_read(addr, (uint8_t *)&info, sizeof(info), 1000))
+                        {
+                            uint16_t startYear = (uint16_t)(info.startTime >> 48);
+                            uint8_t startMonth = (uint8_t)(info.startTime >> 40);
+                            uint8_t startDay = (uint8_t)(info.startTime >> 32);
+                            uint8_t startHour = (uint8_t)(info.startTime >> 24);
+                            uint8_t startMinute = (uint8_t)(info.startTime >> 16);
+                            uint16_t endYear = (uint16_t)(info.endTime >> 48);
+                            uint8_t endMonth = (uint8_t)(info.endTime >> 40);
+                            uint8_t endDay = (uint8_t)(info.endTime >> 32);
+                            uint8_t endHour = (uint8_t)(info.endTime >> 24);
+                            uint8_t endMinute = (uint8_t)(info.endTime >> 16);
+                            UserInfo *user = bsearch(&(UserInfo){.ID = info.ID}, userList, totalUserNum, sizeof(UserInfo), compareUserInfo);                                                                                 // 查找用户
+                            f_printf(&myFile, "%s,%04d/%02d/%02d %02d:%02d,%04d/%02d/%02d %02d:%02d\n", user->Name, startYear, startMonth, startDay, startHour, startMinute, endYear, endMonth, endDay, endHour, endMinute); // 写入文件
+                            addr += sizeof(info);
+                        }
+                    }
+                    f_res = f_close(&myFile);
+                    // if (f_res == FR_OK)
+                    //{
+                    f_res = f_mount(NULL, "0:", 1);
+                    lv_label_set_text(guider_ui.MainMenuScreen_label_8, "导出成功");
+                    lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+                    //}
+                }
+                else
+                {
+                    lv_label_set_text(guider_ui.MainMenuScreen_label_8, "文件打开失败");
+                    lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+#ifdef DEBUG
+                    printf("file open error code:%d\n", f_res);
+#endif
+                }
+            }
+            else
+            {
+                lv_label_set_text(guider_ui.MainMenuScreen_label_8, "文件系统挂载失败");
+                lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+#ifdef DEBUG
+                printf("file system mount error code:%d\n", f_res);
+#endif
+            }
+        }
     }
     default:
         break;
@@ -280,6 +347,7 @@ void myEventInit(lv_ui *ui)
 
     lv_obj_add_event_cb(ui->MainMenuScreen_Clock, MainMenuScreen_Clock_event_handler, LV_EVENT_ALL, ui);
     lv_obj_add_event_cb(ui->MainMenuScreen_ConfirmButton, changeTimePanel_ConfirmButton_event_handler, LV_EVENT_ALL, ui);
+    lv_obj_add_event_cb(ui->MainMenuScreen_btn_9, CheckInfoPanel_ExportButton_event_handler, LV_EVENT_ALL, ui);
 }
 
 void myLVGL_UIInit(void)

@@ -75,11 +75,11 @@ void lv_port_disp_init(void)
     /* Example 2
      * Two buffers for partial rendering
      * In flush_cb DMA or similar hardware should be used to update the display in the background.*/
+    LV_ATTRIBUTE_MEM_ALIGN //__attribute__((section(".ccmram")))
+        static uint8_t buf_2_1[MY_DISP_HOR_RES * 50 * BYTE_PER_PIXEL];
+    //__attribute__((section(".ccmram")))
     LV_ATTRIBUTE_MEM_ALIGN
-    static uint8_t __attribute__((section(".ccmram"))) buf_2_1[MY_DISP_HOR_RES * 50 * BYTE_PER_PIXEL];
-
-    LV_ATTRIBUTE_MEM_ALIGN
-    static uint8_t __attribute__((section(".ccmram"))) buf_2_2[MY_DISP_HOR_RES * 50 * BYTE_PER_PIXEL];
+    static uint8_t buf_2_2[MY_DISP_HOR_RES * 50 * BYTE_PER_PIXEL];
     lv_display_set_buffers(disp, buf_2_1, buf_2_2, sizeof(buf_2_1), LV_DISPLAY_RENDER_MODE_PARTIAL);
 
     /* Example 3

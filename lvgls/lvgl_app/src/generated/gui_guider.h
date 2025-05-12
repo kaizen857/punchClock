@@ -28,8 +28,8 @@ extern "C"
         lv_obj_t *MainMenuScreen_btn_3_label;
         lv_obj_t *MainMenuScreen_btn_4;
         lv_obj_t *MainMenuScreen_btn_4_label;
-        lv_obj_t *MainMenuScreen_btn_5;
-        lv_obj_t *MainMenuScreen_btn_5_label;
+        // lv_obj_t *MainMenuScreen_btn_5;
+        // lv_obj_t *MainMenuScreen_btn_5_label;
         lv_obj_t *MainMenuScreen_userInfoPanel;
         lv_obj_t *MainMenuScreen_tileview_1;
         lv_obj_t *MainMenuScreen_tileview_1_tile;
@@ -83,7 +83,7 @@ extern "C"
         lv_obj_t *MainMenuScreen_label_8;
         lv_obj_t *MainMenuScreen_label_11;
         lv_obj_t *MainMenuScreen_calendar;
-        lv_obj_t *MainMenuScreen_Battery;
+        // lv_obj_t *MainMenuScreen_Battery;
         lv_obj_t *MainMenuScreen_Clock;
         lv_obj_t *g_kb_top_layer;
     } lv_ui;

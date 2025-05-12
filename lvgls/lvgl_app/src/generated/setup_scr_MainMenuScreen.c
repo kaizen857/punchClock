@@ -138,27 +138,27 @@ void setup_scr_MainMenuScreen(lv_ui *ui)
     lv_obj_set_style_text_align(ui->MainMenuScreen_btn_4, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Write codes MainMenuScreen_btn_5
-    ui->MainMenuScreen_btn_5 = lv_button_create(ui->MainMenuScreen_MainMenu);
-    lv_obj_set_pos(ui->MainMenuScreen_btn_5, 402, 4);
-    lv_obj_set_size(ui->MainMenuScreen_btn_5, 74, 31);
-    ui->MainMenuScreen_btn_5_label = lv_label_create(ui->MainMenuScreen_btn_5);
-    lv_label_set_text(ui->MainMenuScreen_btn_5_label, "随机图片");
-    lv_label_set_long_mode(ui->MainMenuScreen_btn_5_label, LV_LABEL_LONG_WRAP);
-    lv_obj_align(ui->MainMenuScreen_btn_5_label, LV_ALIGN_CENTER, 0, 0);
-    lv_obj_set_style_pad_all(ui->MainMenuScreen_btn_5, 0, LV_STATE_DEFAULT);
-    lv_obj_set_width(ui->MainMenuScreen_btn_5_label, LV_PCT(100));
+    // ui->MainMenuScreen_btn_5 = lv_button_create(ui->MainMenuScreen_MainMenu);
+    // lv_obj_set_pos(ui->MainMenuScreen_btn_5, 402, 4);
+    // lv_obj_set_size(ui->MainMenuScreen_btn_5, 74, 31);
+    // ui->MainMenuScreen_btn_5_label = lv_label_create(ui->MainMenuScreen_btn_5);
+    // lv_label_set_text(ui->MainMenuScreen_btn_5_label, "随机图片");
+    // lv_label_set_long_mode(ui->MainMenuScreen_btn_5_label, LV_LABEL_LONG_WRAP);
+    // lv_obj_align(ui->MainMenuScreen_btn_5_label, LV_ALIGN_CENTER, 0, 0);
+    // lv_obj_set_style_pad_all(ui->MainMenuScreen_btn_5, 0, LV_STATE_DEFAULT);
+    // lv_obj_set_width(ui->MainMenuScreen_btn_5_label, LV_PCT(100));
 
     // Write style for MainMenuScreen_btn_5, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
-    lv_obj_set_style_bg_opa(ui->MainMenuScreen_btn_5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_color(ui->MainMenuScreen_btn_5, lv_color_hex(0x2195f6), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_grad_dir(ui->MainMenuScreen_btn_5, LV_GRAD_DIR_NONE, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_border_width(ui->MainMenuScreen_btn_5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(ui->MainMenuScreen_btn_5, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_width(ui->MainMenuScreen_btn_5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(ui->MainMenuScreen_btn_5, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->MainMenuScreen_btn_5, &lv_font_youyuan_16, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui->MainMenuScreen_btn_5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_align(ui->MainMenuScreen_btn_5, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_opa(ui->MainMenuScreen_btn_5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_color(ui->MainMenuScreen_btn_5, lv_color_hex(0x2195f6), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_grad_dir(ui->MainMenuScreen_btn_5, LV_GRAD_DIR_NONE, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_border_width(ui->MainMenuScreen_btn_5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_radius(ui->MainMenuScreen_btn_5, 5, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_shadow_width(ui->MainMenuScreen_btn_5, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_color(ui->MainMenuScreen_btn_5, lv_color_hex(0xffffff), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_font(ui->MainMenuScreen_btn_5, &lv_font_youyuan_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_opa(ui->MainMenuScreen_btn_5, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_align(ui->MainMenuScreen_btn_5, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Write codes MainMenuScreen_userInfoPanel
     ui->MainMenuScreen_userInfoPanel = lv_obj_create(ui->MainMenuScreen);
@@ -1113,27 +1113,27 @@ void setup_scr_MainMenuScreen(lv_ui *ui)
     lv_obj_set_style_shadow_width(ui->MainMenuScreen_calendar, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Write codes MainMenuScreen_Battery
-    ui->MainMenuScreen_Battery = lv_label_create(ui->MainMenuScreen);
-    lv_obj_set_pos(ui->MainMenuScreen_Battery, 214, 5);
-    lv_obj_set_size(ui->MainMenuScreen_Battery, 102, 29);
-    lv_label_set_text(ui->MainMenuScreen_Battery, "当前电量：");
-    lv_label_set_long_mode(ui->MainMenuScreen_Battery, LV_LABEL_LONG_WRAP);
+    // ui->MainMenuScreen_Battery = lv_label_create(ui->MainMenuScreen);
+    // lv_obj_set_pos(ui->MainMenuScreen_Battery, 214, 5);
+    // lv_obj_set_size(ui->MainMenuScreen_Battery, 102, 29);
+    // lv_label_set_text(ui->MainMenuScreen_Battery, "当前电量：");
+    // lv_label_set_long_mode(ui->MainMenuScreen_Battery, LV_LABEL_LONG_WRAP);
 
-    // Write style for MainMenuScreen_Battery, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
-    lv_obj_set_style_border_width(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_radius(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_color(ui->MainMenuScreen_Battery, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_font(ui->MainMenuScreen_Battery, &lv_font_youyuan_16, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_opa(ui->MainMenuScreen_Battery, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_letter_space(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_line_space(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_text_align(ui->MainMenuScreen_Battery, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_bg_opa(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_top(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_right(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_bottom(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_pad_left(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
-    lv_obj_set_style_shadow_width(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // // Write style for MainMenuScreen_Battery, Part: LV_PART_MAIN, State: LV_STATE_DEFAULT.
+    // lv_obj_set_style_border_width(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_radius(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_color(ui->MainMenuScreen_Battery, lv_color_hex(0x000000), LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_font(ui->MainMenuScreen_Battery, &lv_font_youyuan_16, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_opa(ui->MainMenuScreen_Battery, 255, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_letter_space(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_line_space(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_text_align(ui->MainMenuScreen_Battery, LV_TEXT_ALIGN_CENTER, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_bg_opa(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_pad_top(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_pad_right(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_pad_bottom(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_pad_left(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
+    // lv_obj_set_style_shadow_width(ui->MainMenuScreen_Battery, 0, LV_PART_MAIN | LV_STATE_DEFAULT);
 
     // Write codes MainMenuScreen_Clock
     ui->MainMenuScreen_Clock = lv_label_create(ui->MainMenuScreen);

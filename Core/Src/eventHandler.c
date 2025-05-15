@@ -75,6 +75,7 @@ void newUserInfoPanel_ConfirmButton_event_handler(lv_event_t *e)
         lv_obj_add_flag(guider_ui.MainMenuScreen_newUserInfo, LV_OBJ_FLAG_HIDDEN);
         lv_label_set_text(guider_ui.MainMenuScreen_label_8, "添加成功！\n请将卡靠近读卡器");
         lv_obj_clear_flag(guider_ui.MainMenuScreen_eventPopUp, LV_OBJ_FLAG_HIDDEN);
+        lv_refr_now(NULL); // 立即执行刷新
         uint8_t data[16];
         memcpy(data, &id_num, sizeof(id_num));
         uint16_t crc = calculateCRC16(data, sizeof(id_num));

@@ -18,7 +18,7 @@
 #include "main.h"
 #include "adc.h"
 
-#define DEBUG
+// #define DEBUG
 
 // 时间格式
 typedef struct Time

@@ -1,4 +1,5 @@
 #include "function.h"
+#include "DS3231.h"
 #include "at24cxx.h"
 #include "dataStruct.h"
 #include "gui_guider.h"
@@ -24,7 +25,6 @@ uint16_t totalUserNum = 0;
 uint16_t totalCheckNum = 0;
 UserInfo *userList = NULL;
 CheckInfo *checkList = NULL;
-#define DEBUG
 
 Time nowTime = {0};
 
@@ -77,6 +77,9 @@ void ds3231Init(void)
     uint8_t second = DS3231_GetSecond();
     if (year == 2000 && month == 1 && day == 1 && hour == 0 && minute == 0 && second == 0)
     {
+        // 未设置时间，使用默认时间
+        DS3231_SetFullDate(18, 5, 7, 2025);
+        DS3231_SetFullTime(8, 0, 0);
     }
     else // 正常启动
     {
@@ -454,6 +457,7 @@ void RC522Scan(void)
     counttt++;
     if ((counttt % 500) == 0)
     {
+        // PCD_AntennaOn();
         counttt = 0;
         static uint8_t readUid[5]; // 卡号
         static uint8_t CT[3];      // 卡类型
@@ -567,6 +571,7 @@ void RC522Scan(void)
                 }
             }
         }
+        // PCD_AntennaOff();
     }
 }
 /**
@@ -577,6 +582,7 @@ void RC522Scan(void)
  */
 uint8_t RC522WriteCard(uint8_t *Card_Data)
 {
+    // PCD_AntennaOn();
     uint8_t CT[3];      // 卡类型
     uint8_t readUid[5]; // 卡号
     uint8_t status = PCD_Request(0x52, CT);
@@ -597,12 +603,16 @@ uint8_t RC522WriteCard(uint8_t *Card_Data)
         status = PCD_AuthState(PICC_AUTHENT1A, 4, KEY_A, readUid);
         if (status == PCD_OK) // 验证A成功
         {
+#ifdef DEBUG
             printf("A密钥验证成功\r\n");
+#endif
             // HAL_Delay(1000);
         }
         else
         {
+#ifdef DEBUG
             printf("A密钥验证失败\r\n");
+#endif
             // HAL_Delay(1000);
         }
 
@@ -610,11 +620,15 @@ uint8_t RC522WriteCard(uint8_t *Card_Data)
         status = PCD_AuthState(PICC_AUTHENT1B, 4, KEY_B, readUid);
         if (status == PCD_OK) // 验证B成功
         {
+#ifdef DEBUG
             printf("B密钥验证成功\r\n");
+#endif
         }
         else
         {
+#ifdef DEBUG
             printf("B密钥验证失败\r\n");
+#endif
         }
         if (status == PCD_OK)
         {
@@ -637,6 +651,7 @@ uint8_t RC522WriteCard(uint8_t *Card_Data)
             }
         }
     }
+    // PCD_AntennaOff();
     return status;
 }
 

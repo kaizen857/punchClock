@@ -255,15 +255,15 @@ void PCD_Reset(void)
 {
     /*硬复位*/
     RS522_RST(1); // 用到复位引脚
-    osDelay(2);
+    osDelay(3);
     RS522_RST(0);
-    osDelay(2);
+    osDelay(3);
     RS522_RST(1);
-    osDelay(2);
+    osDelay(3);
 
     /*软复位*/
     MFRC_WriteReg(MFRC_CommandReg, MFRC_RESETPHASE);
-    osDelay(2);
+    osDelay(3);
 
     /*复位后的初始化配置*/
     MFRC_WriteReg(MFRC_ModeReg, 0x3D);   // CRC初始值0x6363
@@ -274,10 +274,11 @@ void PCD_Reset(void)
     MFRC_WriteReg(MFRC_TxAutoReg, 0x40);     // 100%ASK
 
     PCD_AntennaOff(); // 关天线
-    osDelay(2);
+    osDelay(3);
     PCD_AntennaOn(); // 开天线
-
+#ifdef DEBUG
     printf("初始化完成\n");
+#endif
 }
 
 /**************************************************************************************

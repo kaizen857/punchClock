@@ -330,11 +330,11 @@ int main(void)
 #ifndef WRITEMODE
 #ifndef READMODE
 #ifndef SDTEST
-    ds3231Init();
     delay_init(100);
-    at24Init();
     LCD_Init();
     LCD_direction(3);
+    ds3231Init();
+    at24Init();
     TP_Init();
     lv_init();
     lv_port_disp_init();

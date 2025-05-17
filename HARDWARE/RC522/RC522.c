@@ -322,7 +322,7 @@ void PCD_AntennaOff(void)
  ***************************************************************************************/
 void PCD_Init(void)
 {
-    MFRC_Init();      // MFRC管脚配置
+    //MFRC_Init();      // MFRC管脚配置
     PCD_Reset();      // PCD复位  并初始化配置
     PCD_AntennaOff(); // 关闭天线
     PCD_AntennaOn();  // 开启天线

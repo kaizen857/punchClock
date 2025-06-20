@@ -4,13 +4,13 @@
 
 MCU:STM32f412RGT6
 
-环境：VScode + stm32cubeMX + EIDE + Clangd
+环境：ArchLinux + VScode + stm32cubeMX + EIDE + Clangd
 
 cubeMX工具链选择STM32CubeIDE
 
 EIDE构建配置：GCC
 
-EIDE烧录配置：STLink
+EIDE烧录配置：shell(st-util)
 
 ## 项目状态
 
@@ -20,14 +20,14 @@ EIDE烧录配置：STLink
 
 ## 实现功能
 
-- [ ] NFC打卡事件
-- [ ] 存储打卡记录
-- [ ] 学生信息存储
+- [x] NFC打卡事件
+- [x] 存储打卡记录
+- [x] 学生信息存储
 - [x] 触摸事件
-- [ ] 修改系统时间
-- [ ] 修改系统日期
-- [ ] 导出打卡记录
-- [ ] 显示总打卡记录
-- [ ] 添加学生信息
+- [x] 修改系统时间
+- [x] 修改系统日期
+- [x] 导出打卡记录
+- [x] 显示总打卡记录
+- [x] 添加学生信息
 
 还有更多想到再说.jpg
